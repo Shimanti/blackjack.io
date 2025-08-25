@@ -1,0 +1,474 @@
+import React, { useState, useEffect } from ‘react’;
+
+const BlackjackApp = () => {
+// Game state
+const [deck, setDeck] = useState([]);
+const [playerHand, setPlayerHand] = useState([]);
+const [dealerHand, setDealerHand] = useState([]);
+const [gameState, setGameState] = useState(‘betting’); // betting, playing, dealer, gameOver
+const [playerScore, setPlayerScore] = useState(0);
+const [dealerScore, setDealerScore] = useState(0);
+const [chips, setChips] = useState(10000);
+const [bet, setBet] = useState(0);
+const [message, setMessage] = useState(‘Place your bet to start playing’);
+const [showDealerSecondCard, setShowDealerSecondCard] = useState(false);
+
+// Create deck
+const createDeck = () => {
+const suits = [‘♠’, ‘♥’, ‘♦’, ‘♣’];
+const ranks = [‘A’, ‘2’, ‘3’, ‘4’, ‘5’, ‘6’, ‘7’, ‘8’, ‘9’, ‘10’, ‘J’, ‘Q’, ‘K’];
+const newDeck = [];
+
+```
+suits.forEach(suit => {
+  ranks.forEach(rank => {
+    newDeck.push({ suit, rank, value: getCardValue(rank) });
+  });
+});
+
+return shuffleDeck(newDeck);
+```
+
+};
+
+const shuffleDeck = (deck) => {
+const shuffled = […deck];
+for (let i = shuffled.length - 1; i > 0; i–) {
+const j = Math.floor(Math.random() * (i + 1));
+[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+}
+return shuffled;
+};
+
+const getCardValue = (rank) => {
+if (rank === ‘A’) return 11;
+if ([‘J’, ‘Q’, ‘K’].includes(rank)) return 10;
+return parseInt(rank);
+};
+
+// Calculate hand value
+const calculateHandValue = (hand) => {
+let value = 0;
+let aces = 0;
+
+```
+hand.forEach(card => {
+  if (card.rank === 'A') {
+    aces++;
+  }
+  value += card.value;
+});
+
+while (value > 21 && aces > 0) {
+  value -= 10;
+  aces--;
+}
+
+return value;
+```
+
+};
+
+// Initialize game
+useEffect(() => {
+setDeck(createDeck());
+}, []);
+
+// Update scores when hands change
+useEffect(() => {
+setPlayerScore(calculateHandValue(playerHand));
+}, [playerHand]);
+
+useEffect(() => {
+setDealerScore(calculateHandValue(dealerHand));
+}, [dealerHand]);
+
+// Deal card
+const dealCard = () => {
+if (deck.length === 0) return null;
+const card = deck[0];
+setDeck(prevDeck => prevDeck.slice(1));
+return card;
+};
+
+// Place bet
+const placeBet = (amount) => {
+if (amount > chips) return;
+setBet(amount);
+setChips(chips - amount);
+startNewGame();
+};
+
+// Start new game
+const startNewGame = () => {
+const newDeck = deck.length < 20 ? createDeck() : deck;
+setDeck(newDeck);
+
+```
+const playerCard1 = newDeck[0];
+const dealerCard1 = newDeck[1];
+const playerCard2 = newDeck[2];
+const dealerCard2 = newDeck[3];
+
+setPlayerHand([playerCard1, playerCard2]);
+setDealerHand([dealerCard1, dealerCard2]);
+setDeck(newDeck.slice(4));
+setGameState('playing');
+setShowDealerSecondCard(false);
+setMessage('Make your move');
+```
+
+};
+
+// Player actions
+const hit = () => {
+const newCard = dealCard();
+if (newCard) {
+const newPlayerHand = […playerHand, newCard];
+setPlayerHand(newPlayerHand);
+
+```
+  const newScore = calculateHandValue(newPlayerHand);
+  if (newScore > 21) {
+    setGameState('gameOver');
+    setMessage('House wins');
+    setBet(0);
+  }
+}
+```
+
+};
+
+const stand = () => {
+setGameState(‘dealer’);
+setShowDealerSecondCard(true);
+dealerTurn();
+};
+
+// Dealer turn
+const dealerTurn = () => {
+setTimeout(() => {
+let currentDealerHand = […dealerHand];
+let currentDeck = […deck];
+
+```
+  while (calculateHandValue(currentDealerHand) < 17) {
+    if (currentDeck.length > 0) {
+      const newCard = currentDeck[0];
+      currentDealerHand.push(newCard);
+      currentDeck = currentDeck.slice(1);
+    } else {
+      break;
+    }
+  }
+  
+  setDealerHand(currentDealerHand);
+  setDeck(currentDeck);
+  
+  setTimeout(() => {
+    determineWinner(calculateHandValue(playerHand), calculateHandValue(currentDealerHand));
+  }, 1000);
+}, 1000);
+```
+
+};
+
+// Determine winner
+const determineWinner = (playerScore, dealerScore) => {
+if (dealerScore > 21) {
+setMessage(‘You win’);
+setChips(chips + bet * 2);
+} else if (playerScore > dealerScore) {
+setMessage(‘You win’);
+setChips(chips + bet * 2);
+} else if (playerScore < dealerScore) {
+setMessage(‘House wins’);
+} else {
+setMessage(‘Push’);
+setChips(chips + bet);
+}
+
+```
+setGameState('gameOver');
+setBet(0);
+```
+
+};
+
+// New round
+const newRound = () => {
+setPlayerHand([]);
+setDealerHand([]);
+setPlayerScore(0);
+setDealerScore(0);
+setGameState(‘betting’);
+setMessage(‘Place your bet to start playing’);
+setShowDealerSecondCard(false);
+};
+
+// Luxury Card component
+const Card = ({ card, hidden = false, index = 0 }) => {
+const isRed = card && (card.suit === ‘♥’ || card.suit === ‘♦’);
+const animationDelay = `${index * 150}ms`;
+
+```
+if (hidden) {
+  return (
+    <div 
+      className="w-20 h-32 rounded-2xl shadow-2xl transform transition-all duration-500 hover:scale-105"
+      style={{ 
+        animationDelay,
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #1e1b4b 100%)',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.3), 0 0 20px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
+      }}
+    >
+      <div className="w-full h-full rounded-2xl flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-transparent rounded-2xl"></div>
+        <div className="text-3xl text-blue-200 font-bold opacity-80">♠</div>
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="w-full h-full border-2 border-blue-300/20 rounded-2xl"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+return (
+  <div 
+    className="w-20 h-32 rounded-2xl shadow-2xl transform transition-all duration-500 hover:scale-105 animate-slideIn"
+    style={{ 
+      animationDelay,
+      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+      boxShadow: '0 20px 40px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.8)'
+    }}
+  >
+    <div className={`w-full h-full rounded-2xl flex flex-col items-center justify-between p-2 relative overflow-hidden ${isRed ? 'text-red-600' : 'text-gray-800'}`}>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent rounded-2xl"></div>
+      <div className="text-sm font-bold z-10">{card.rank}</div>
+      <div className="text-4xl z-10 drop-shadow-sm">{card.suit}</div>
+      <div className="text-sm font-bold transform rotate-180 z-10">{card.rank}</div>
+      <div className="absolute top-0 left-0 w-full h-full">
+        <div className="w-full h-full border border-gray-200/50 rounded-2xl"></div>
+      </div>
+    </div>
+  </div>
+);
+```
+
+};
+
+const formatCurrency = (amount) => {
+return new Intl.NumberFormat(‘en-US’, {
+style: ‘currency’,
+currency: ‘USD’,
+minimumFractionDigits: 0,
+maximumFractionDigits: 0,
+}).format(amount);
+};
+
+return (
+<div className="min-h-screen relative overflow-hidden">
+{/* Luxury Background */}
+<div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-800"></div>
+<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.1),transparent_50%)]"></div>
+<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(6,78,59,0.2),transparent_50%)]"></div>
+
+```
+  {/* Animated background elements */}
+  <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl animate-pulse"></div>
+  <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+  
+  <div className="relative z-10 p-6">
+    <div className="max-w-7xl mx-auto">
+      {/* Luxurious Header */}
+      <div className="text-center mb-8">
+        <div className="inline-block relative">
+          <h1 className="text-6xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 bg-clip-text text-transparent drop-shadow-2xl tracking-wider">
+            BLACKJACK
+          </h1>
+          <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400/20 to-yellow-200/20 blur-xl -z-10 rounded-lg"></div>
+        </div>
+        <p className="text-emerald-200 text-lg mt-2 font-light tracking-wide">Private Gaming Experience</p>
+        
+        {/* Premium Stats Display */}
+        <div className="flex justify-center items-center space-x-12 mt-6">
+          <div className="relative">
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-lg px-8 py-4 rounded-2xl shadow-2xl border border-emerald-500/20">
+              <div className="text-emerald-300 text-sm font-light uppercase tracking-widest">Balance</div>
+              <div className="text-2xl font-bold text-white">{formatCurrency(chips)}</div>
+            </div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/30 to-blue-500/30 rounded-2xl blur opacity-60 -z-10"></div>
+          </div>
+          
+          <div className="relative">
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-lg px-8 py-4 rounded-2xl shadow-2xl border border-yellow-500/20">
+              <div className="text-yellow-300 text-sm font-light uppercase tracking-widest">Current Bet</div>
+              <div className="text-2xl font-bold text-white">{formatCurrency(bet)}</div>
+            </div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/30 to-orange-500/30 rounded-2xl blur opacity-60 -z-10"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Premium Game Table */}
+      <div className="relative">
+        <div className="bg-gradient-to-br from-emerald-800/40 to-emerald-900/40 backdrop-blur-xl rounded-[3rem] p-12 shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-emerald-500/20">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-emerald-500/20 rounded-[3rem] blur opacity-50 -z-10"></div>
+          
+          {/* Dealer Section */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-lg">D</span>
+                </div>
+                <h2 className="text-3xl font-light text-white tracking-wide">Dealer</h2>
+              </div>
+              <div className="bg-gradient-to-r from-red-500/20 to-red-600/20 backdrop-blur-sm px-6 py-3 rounded-xl border border-red-500/30">
+                <div className="text-2xl font-bold text-red-200">
+                  {showDealerSecondCard ? dealerScore : (dealerHand.length > 0 ? dealerHand[0].value : '—')}
+                </div>
+              </div>
+            </div>
+            <div className="flex space-x-4 justify-center">
+              {dealerHand.map((card, index) => (
+                <Card 
+                  key={index} 
+                  card={card} 
+                  hidden={index === 1 && !showDealerSecondCard}
+                  index={index}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Premium Message Display */}
+          <div className="text-center mb-12">
+            <div className="inline-block relative">
+              <div className="bg-gradient-to-r from-slate-800/90 to-slate-900/90 backdrop-blur-xl text-white text-2xl font-light py-6 px-12 rounded-2xl shadow-2xl border border-white/10">
+                {message}
+              </div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-white/20 to-emerald-500/20 rounded-2xl blur opacity-40 -z-10"></div>
+            </div>
+          </div>
+
+          {/* Player Section */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-lg">P</span>
+                </div>
+                <h2 className="text-3xl font-light text-white tracking-wide">Player</h2>
+              </div>
+              <div className="bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 backdrop-blur-sm px-6 py-3 rounded-xl border border-emerald-500/30">
+                <div className="text-2xl font-bold text-emerald-200">{playerScore}</div>
+              </div>
+            </div>
+            <div className="flex space-x-4 justify-center">
+              {playerHand.map((card, index) => (
+                <Card key={index} card={card} index={index} />
+              ))}
+            </div>
+          </div>
+
+          {/* Luxury Controls */}
+          <div className="flex justify-center space-x-6">
+            {gameState === 'betting' && (
+              <>
+                {[100, 500, 1000, 2500].map((amount, index) => (
+                  <button
+                    key={amount}
+                    onClick={() => placeBet(amount)}
+                    disabled={chips < amount}
+                    className={`relative group transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed`}
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <div className={`px-8 py-4 rounded-xl text-white font-semibold text-lg shadow-2xl transition-all duration-300 ${
+                      amount === 100 ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600' :
+                      amount === 500 ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600' :
+                      amount === 1000 ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600' :
+                      'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-500 hover:to-yellow-600'
+                    }`}>
+                      {formatCurrency(amount)}
+                    </div>
+                    <div className={`absolute -inset-0.5 rounded-xl blur opacity-0 group-hover:opacity-60 transition-opacity duration-300 ${
+                      amount === 100 ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
+                      amount === 500 ? 'bg-gradient-to-r from-purple-400 to-purple-500' :
+                      amount === 1000 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' :
+                      'bg-gradient-to-r from-yellow-400 to-yellow-500'
+                    } -z-10`}></div>
+                  </button>
+                ))}
+              </>
+            )}
+
+            {gameState === 'playing' && (
+              <>
+                <button
+                  onClick={hit}
+                  className="relative group transition-all duration-300 transform hover:scale-105"
+                >
+                  <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-4 px-10 rounded-xl text-xl shadow-2xl transition-all duration-300">
+                    HIT
+                  </div>
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-xl blur opacity-0 group-hover:opacity-60 transition-opacity duration-300 -z-10"></div>
+                </button>
+                <button
+                  onClick={stand}
+                  className="relative group transition-all duration-300 transform hover:scale-105"
+                >
+                  <div className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold py-4 px-10 rounded-xl text-xl shadow-2xl transition-all duration-300">
+                    STAND
+                  </div>
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-red-400 to-red-500 rounded-xl blur opacity-0 group-hover:opacity-60 transition-opacity duration-300 -z-10"></div>
+                </button>
+              </>
+            )}
+
+            {gameState === 'gameOver' && (
+              <button
+                onClick={newRound}
+                className="relative group transition-all duration-300 transform hover:scale-105"
+              >
+                <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold py-4 px-10 rounded-xl text-xl shadow-2xl transition-all duration-300">
+                  NEW ROUND
+                </div>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl blur opacity-0 group-hover:opacity-60 transition-opacity duration-300 -z-10"></div>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Elegant Footer */}
+      <div className="mt-8 text-center">
+        <p className="text-emerald-300/60 text-sm font-light tracking-wide">
+          Premium Gaming • Responsible Play • Ages 21+
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <style jsx>{`
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) rotate(-5deg);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) rotate(0deg);
+      }
+    }
+    .animate-slideIn {
+      animation: slideIn 0.8s ease-out forwards;
+    }
+  `}</style>
+</div>
+```
+
+);
+};
+
+export default BlackjackApp;
